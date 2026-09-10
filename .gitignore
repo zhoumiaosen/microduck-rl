@@ -1,0 +1,51 @@
+# Python-generated files
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+outputs/
+.superpowers/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.python-version
+# uv.lock
+
+
+
+# Virtual environments
+.venv
+
+# Logs and databases
+wandb
+logs
+agents
+
+*.pch
+nohup.out
+*.onnx
+beyondmimic_motions/
+artifacts/
+*.npz
+
+src/mjlab_microduck/robot/microduck.bak/*
+src/mjlab_microduck/robot/microduck_test/*
+data/
+*.pt
+# Curated swing checkpoints are part of the reproducibility release.
+!experiments/swing/checkpoints/*.pt
+
+claude_experiments/
+
+backup_onnx/
+
+# Generated swing-seat work products (released meshes live one level up).
+hardware/swing-seat/source/output/
+hardware/swing-seat/source/output_padded/
+hardware/swing-seat/source/output_retained/
+
+
+logdir/.claude/
+logdir/
+logdir/.claude/worktrees/
