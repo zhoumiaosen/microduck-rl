@@ -144,3 +144,24 @@ def test_controller_cli_clears_inherited_running_flags(monkeypatch, tmp_path):
                                     '--output-dir', str(tmp_path), '--check-controller'])
     launcher.main()
     assert 'MICRODUCK_RUNNING_HIGH_SPEED_STAGE_INTERVAL' not in observed
+
+
+def test_live_yaw_check_follows_standing_mask_after_resampling():
+    import torch
+    from types import SimpleNamespace
+    from mjlab_microduck.tasks import mdp
+    from scripts.experiments.run_straight_comparison import check_yaw_correction
+    term = object.__new__(mdp.RunningStraightCommand)
+    term.robot = SimpleNamespace(data=SimpleNamespace(heading_w=torch.tensor([0., 0.])))
+    term.target_heading = torch.tensor([.3, .3])
+    term._pending_heading = torch.zeros(2, dtype=torch.bool)
+    term.vel_command_b = torch.zeros(2, 3)
+    term.is_standing_env = torch.tensor([True, False])
+    term._update_command()
+    check_yaw_correction(term)
+    term.is_standing_env = torch.tensor([False, True])
+    term._update_command()
+    check_yaw_correction(term)
+    term.vel_command_b[1, 2] = .24
+    with pytest.raises(AssertionError):
+        check_yaw_correction(term)

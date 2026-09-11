@@ -495,12 +495,19 @@ def verify_parity(checkpoint, onnx_path, output):
         env.close()
 
 
+def check_yaw_correction(term):
+    import torch
+    from mjlab_microduck.tasks.mdp_terms.running import running_heading_yaw_rate
+    expected = running_heading_yaw_rate(term.target_heading, term.robot.data.heading_w)
+    expected[term.is_standing_env] = 0.0
+    torch.testing.assert_close(term.command[:, 2], expected)
+
+
 def check_controller(parent, output):
     """Exercise eight real environments through full and partial reset ordering."""
     import torch
     from mjlab.envs import ManagerBasedRlEnv
     from mjlab.tasks.registry import load_env_cfg
-    from mjlab_microduck.tasks.mdp_terms.running import running_heading_yaw_rate
     import mjlab_microduck.tasks  # noqa: F401
     source = checkpoint_info(parent)
     cfg = load_env_cfg(TASK)
@@ -521,13 +528,12 @@ def check_controller(parent, output):
         raw.reset(env_ids=ids)
         torch.testing.assert_close(term.target_heading[ids], term.robot.data.heading_w[ids])
         torch.testing.assert_close(term.target_heading[remaining], old_targets[remaining])
-        expected = running_heading_yaw_rate(term.target_heading, term.robot.data.heading_w)
-        torch.testing.assert_close(term.command[:, 2], expected)
+        check_yaw_correction(term)
         targets = term.target_heading.clone()
         term.time_left[:] = 0.0
         raw.command_manager.compute(dt=0.0)
         torch.testing.assert_close(term.target_heading, targets)
-        torch.testing.assert_close(term.command[:, 2], expected)
+        check_yaw_correction(term)
         if term._pending_heading.any():
             raise ValueError('Pending heading capture remained after sim.forward and command update')
         write(output / 'controller-check.json', {'num_envs': 8, 'partial_reset_ids': [1, 3, 6],
