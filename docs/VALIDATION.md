@@ -22,8 +22,23 @@ the committed dependency lock, and an NVIDIA RTX 3070 (8 GB).
 The two skips are the ARM64 GPU-specific Torch check (this is x86_64) and
 the Rust runtime adapter test (`rustc` is not installed). These are the same
 skips as the baseline. GitHub Actions has been updated but has not run remotely.
-Native Windows GPU training, long training runs, and physical robot deployment
-were not tested. Five updates verify the training pipeline, not policy quality.
+At this initial validation, native Windows GPU training, long training runs,
+and physical robot deployment were not tested. Five updates verify the training
+pipeline, not policy quality. The subsequent running release is recorded below.
+
+## Running release (2026-09-11)
+
+The running policy completed 10,000 additional PPO updates from `model_999.pt`
+with 512 environments on the RTX 3070, reaching final checkpoint `model_10998.pt`.
+No nonzero NaN terminations were logged. Evaluation and normalized ONNX export
+completed, and the [public release](https://huggingface.co/zhoumiaosen/microduck-running)
+includes the checkpoint, ONNX policy, replay video, and raw evaluation JSON.
+
+At a 2.0 m/s command, three 10-second evaluations (512 environments each, seeds
+123/456/789) averaged 1.499 m/s body-forward speed, 1.234 m/s straight progress,
+and 96.74% survival. The 30-second evaluation (seed 456) measured 1.499 m/s
+body-forward speed and 91.21% survival. The sustained 2.0 m/s target was not met.
+Physical robot deployment remains untested.
 
 During final verification the original checkout gained a new untracked
 `STRAIGHT_SPEED_RESULTS.md`. It was not part of the starting snapshot and was

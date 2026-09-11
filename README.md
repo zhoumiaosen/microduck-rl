@@ -1,124 +1,27 @@
 # MicroDuck RL
 
-Local reinforcement-learning environments, policy experiments, and printable
-hardware add-ons for [Pollen Robotics' MicroDuck](https://github.com/pollen-robotics/microduck).
+Train, evaluate, and export reinforcement-learning policies for [Pollen Robotics' MicroDuck](https://github.com/pollen-robotics/microduck), a small biped with 14 actuators. Built with **mjlab, MuJoCo Warp, and PPO**, with 39 registered tasks covering locomotion and additional behaviors.
 
-This independent snapshot refactors
-[`Vottivott/microduck-playground`](https://github.com/Vottivott/microduck-playground),
-itself derived from [`pollen-robotics/microduck_rl`](https://github.com/pollen-robotics/microduck_rl).
-It starts a fresh local Git history on `main`; it does not preserve the source
-Git history and has no configured publishing destination. It is not an official
-Pollen Robotics release. All registered RL task families are retained.
-See [provenance](docs/PROVENANCE.md), [NOTICE](NOTICE), and the
-[current validation record](docs/VALIDATION.md).
+[**Download the trained model**](https://huggingface.co/zhoumiaosen/microduck-running) · [**Watch the running video**](https://huggingface.co/zhoumiaosen/microduck-running/resolve/main/run.mp4) · [Setup](#setup) · [Train](#train-and-resume) · [Validation](docs/VALIDATION.md)
 
-The experiment results and media below are retained source artifacts, not new
-measurements of this refactor. External policy links remain attributed to their
-original publishers.
+## Published running policy
 
-## Experiments
+The current release reaches **1.50 m/s average body-forward speed in simulation**. It was trained toward a 2.0 m/s command; that sustained-speed target was **not met**.
 
-Animated previews play directly in the table. Click one—or use its explicit
-full-video link—to open the complete silent MP4.
+| Evaluation | Mean body-forward speed | Mean straight progress | Survival |
+| --- | ---: | ---: | ---: |
+| 10 seconds, averaged over three seeds | 1.499 m/s | 1.234 m/s | 96.74% |
+| 30 seconds, seed 456 | 1.499 m/s | See raw evaluation | 91.21% |
 
-<table>
-  <thead>
-    <tr>
-      <th>Experiment</th>
-      <th>Preview</th>
-      <th>Result and artifacts</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>Self-pumped swing</strong></td>
-      <td>
-        <a href="experiments/swing/media/alpha050_seed27.mp4">
-          <img src="experiments/swing/media/preview.gif" width="280" alt="Animated preview of MicroDuck pumping itself on a swing">
-        </a>
-      </td>
-      <td>
-        Starts still and reaches a 173.20° strict full span.<br>
-        <a href="experiments/swing/media/alpha050_seed27.mp4">Full video</a> ·
-        <a href="experiments/swing/README.md">Experiment</a> ·
-        <a href="integrations/pollen-microduck/README.md">Runtime adapter</a> ·
-        <a href="https://huggingface.co/HannesVonEssen/microduck-swing">ONNX on Hugging Face</a>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>Fast running</strong></td>
-      <td>
-        <a href="experiments/running/media/preview.mp4">
-          <img src="experiments/running/media/preview.gif" width="280" alt="Animated preview of MicroDuck running on flat ground">
-        </a>
-      </td>
-      <td>
-        Robustified iteration-12,195 simulation candidate: 1.651 m/s nominal,
-        and 1.612 m/s under backlash plus disturbance stress.<br>
-        <a href="experiments/running/media/preview.mp4">Full video</a> ·
-        <a href="experiments/running/README.md">Experiment</a> ·
-        <a href="https://huggingface.co/HannesVonEssen/microduck-running">ONNX on Hugging Face</a>
-      </td>
-    </tr>
-    <tr>
-      <td><strong>Stilt walking</strong></td>
-      <td>
-        <a href="experiments/stilts/media/preview.mp4">
-          <img src="experiments/stilts/media/preview.gif" width="280" alt="Animated preview of MicroDuck walking on green 10 cm stilts">
-        </a>
-      </td>
-      <td>
-        Blend-0.50 policies for 10, 15, 20, 25, and 50 cm, plus
-        1.0, 1.4, and 2.0 m simulation stilts (10 cm shown).<br>
-        <a href="experiments/stilts/media/preview.mp4">Full video</a> ·
-        <a href="experiments/stilts/README.md">Experiment</a> ·
-        <a href="hardware/stilts/README.md">Hardware</a> ·
-        <a href="https://huggingface.co/HannesVonEssen/microduck-stilts">Policies and videos</a>
-      </td>
-    </tr>
-  </tbody>
-</table>
+Each evaluation uses 512 environments at a 2.0 m/s command. Heading drift reduces straight-line progress, so body-forward speed should not be confused with travel along the original heading. These are simulation results; this release has not been validated on a physical robot.
 
-Each preview is a direct simulation demonstration of the policy linked in its
-row. Compact machine-readable evaluation records live beside each experiment.
+The [Hugging Face release](https://huggingface.co/zhoumiaosen/microduck-running) contains the final PPO checkpoint, normalized ONNX policy, video, full model card, file hashes, and [raw evaluations](https://huggingface.co/zhoumiaosen/microduck-running/tree/main/evaluation). Training used an RTX 3070, 512 environments, and 10,000 additional updates resumed from iteration 999. The released checkpoint is `model_10998.pt`.
 
-## Hardware galleries
+## Setup
 
-The retained swing seat keeps the battery centered without occupying the
-head-and-leg pumping corridors. It includes compliant locating pads, a padded
-strap, and a removable buckle. The source generators, printable millimetre
-meshes, MuJoCo collision hulls, and clearance reports are under
-[`hardware/swing-seat`](hardware/swing-seat/README.md).
+Use **Linux or WSL2**, Python **3.12**, and [uv](https://docs.astral.sh/uv/). GPU training requires a CUDA-capable NVIDIA GPU available inside Linux/WSL. Native Windows GPU training is not supported by this setup.
 
-<table>
-  <tr>
-    <td align="center"><img src="hardware/swing-seat/renders/seat_front.png" width="300" alt="Retained swing seat, front view"><br><sub>Front</sub></td>
-    <td align="center"><img src="hardware/swing-seat/renders/seat_three_quarter.png" width="300" alt="Retained swing seat, three-quarter view"><br><sub>Three-quarter</sub></td>
-    <td align="center"><img src="hardware/swing-seat/renders/seat_side.png" width="300" alt="Retained swing seat, side view"><br><sub>Side</sub></td>
-  </tr>
-</table>
-
-The stilt system replaces the removable soles and preserves explicit tip
-contact geometry. The gallery uses the demonstrated green 10 cm blend-0.50
-configuration. Parametric generators and printable meshes are under
-[`hardware/stilts`](hardware/stilts/README.md).
-
-<table>
-  <tr>
-    <td align="center"><img src="hardware/stilts/renders/stilts_front.png" width="230" alt="MicroDuck green stilts, front view"><br><sub>Front</sub></td>
-    <td align="center"><img src="hardware/stilts/renders/stilts_three_quarter.png" width="230" alt="MicroDuck green stilts, three-quarter view"><br><sub>Three-quarter</sub></td>
-    <td align="center"><img src="hardware/stilts/renders/stilts_side.png" width="230" alt="MicroDuck green stilts, side view"><br><sub>Side</sub></td>
-    <td align="center"><img src="hardware/stilts/renders/printed_stilt.jpg" width="230" alt="Green 3D-printed MicroDuck replacement sole and stilt prototype"><br><sub>3D-printed prototype</sub></td>
-  </tr>
-</table>
-
-## Setup and task discovery
-
-Use Linux or WSL2 with Python 3.12 and [`uv`](https://docs.astral.sh/uv/).
-GPU training requires a CUDA-capable NVIDIA GPU accessible from that Linux
-session. Native Windows training is not the supported setup. Run these commands
-from this checkout's root (in WSL, for example,
-`cd /mnt/f/Codex_GitHub/Duck/microduck-rl`):
+From the root of your cloned checkout:
 
 ```bash
 uv python install 3.12
@@ -126,112 +29,117 @@ uv sync --locked --python 3.12
 uv run --locked list-envs
 ```
 
-`uv.lock` fixes dependency revisions, including BAM. Keep the lockfile and
-`pyproject.toml` together; do not upgrade dependencies to troubleshoot setup
-without checking compatibility. See [validation](docs/VALIDATION.md) for checks
-that have actually run and platform limitations.
+Keep `uv.lock` and `pyproject.toml` together. The lockfile records the dependency versions used by this project. See [validation](docs/VALIDATION.md) for tested configurations and remaining limitations.
 
-## Train and resume
+## Try the published model
 
-Start with a five-iteration smoke run, then run the full configuration after
-checking its output. TensorBoard logging keeps these examples local.
+Download the public release without needing a Hugging Face login:
 
 ```bash
-uv run --locked train Mjlab-SwingPump-MicroDuck \
-  --env.scene.num-envs 64 \
-  --agent.max-iterations 5 \
-  --agent.logger tensorboard
-
-uv run --locked train Mjlab-SwingPump-MicroDuck \
-  --env.scene.num-envs 4096 \
-  --agent.logger tensorboard
+uv run --locked hf download zhoumiaosen/microduck-running \
+  --revision 49f70558bd8f42f0f05fcdea64f4bec596c9a3a6 \
+  --local-dir artifacts/pretrained/microduck-running
 ```
 
-Logs and checkpoints are written under `logs/rsl_rl/<experiment_name>/<run>/`.
-To resume, set `RUN` to the existing run directory name and `MODEL` to its
-checkpoint filename. Use the same task and environment settings as the saved
-run; `--agent.load-run` is relative to that task's experiment log directory.
+Measure it at a 2.0 m/s command:
 
 ```bash
-RUN=your_existing_run_directory
-MODEL=model_4.pt
-uv run --locked train Mjlab-SwingPump-MicroDuck \
-  --agent.resume True \
-  --agent.load-run "$RUN" \
-  --agent.load-checkpoint "$MODEL" \
-  --env.scene.num-envs 64 \
-  --agent.max-iterations 5 \
-  --agent.logger tensorboard
-```
-
-The retained [running continuation recipe](experiments/running/README.md) has
-specific curriculum settings for its published checkpoint. Additional running
-trial scripts live in [`scripts/experiments/`](scripts/experiments/); inspect
-their settings before starting a run.
-
-## Evaluate and export
-
-Set `CHECKPOINT` to the full path of a swing checkpoint from the run above.
-The swing evaluator measures a deterministic physical rollout and writes JSON;
-it does not certify hardware readiness.
-
-```bash
-CHECKPOINT=/absolute/path/to/model_4.pt
 mkdir -p outputs
-uv run --locked python scripts/evaluate_swing_checkpoint.py "$CHECKPOINT" \
-  --output outputs/swing-evaluation.json --device cpu --duration 24 --seed 72
-
-uv run --locked python scripts/export.py Mjlab-SwingPump-MicroDuck \
-  --checkpoint-file "$CHECKPOINT" \
-  --onnx-file outputs/swing.onnx --num-envs 1 --device cpu
-```
-
-Always export through `scripts/export.py`: it embeds observation normalization,
-training action clipping where configured, and policy metadata. For swing
-runtime requirements, use the [policy-specific adapter](integrations/pollen-microduck/README.md).
-For a running checkpoint, use its task and evaluator instead:
-
-```bash
-RUNNING_CHECKPOINT=/absolute/path/to/running_checkpoint.pt
 uv run --locked python scripts/evaluate_running_checkpoint.py \
-  --checkpoint-file "$RUNNING_CHECKPOINT" \
-  --task-id Mjlab-Running-Flat-MicroDuck --speed 2.2 \
-  --num-envs 64 --duration-s 10 --warmup-s 1 \
+  --checkpoint-file artifacts/pretrained/microduck-running/model_10998.pt \
+  --speed 2.0 --num-envs 512 --duration-s 10 --warmup-s 1 --seed 123 \
   --output-file outputs/running-evaluation.json
 ```
 
-## Repository layout
+Use seeds 456 and 789 for the other short evaluations; use seed 456 and `--duration-s 30` for the long evaluation. Reducing `--num-envs` can help on smaller GPUs, but changes the evaluation population.
 
-```text
-experiments/
-  running/               clean policy preview and result summary
-  stilts/                policy index, executed curriculum, continuation guide
-  swing/                 selected checkpoints, evaluation, media, methodology
-hardware/
-  stilts/                parametric stilt generator and printable meshes
-  swing-seat/            retained-seat generator, meshes, clearance reports
-src/mjlab_microduck/     tasks, robot models, actuator model, rewards
-scripts/                evaluation, export, rendering, and selection tools
-  experiments/          local running trial and continuation scripts
-integrations/            policy-specific deployment adapters
-tests/                   CPU configuration and invariant tests
-docs/                    supporting research and training notes
+Record a ten-second replay and export the policy:
+
+```bash
+MUJOCO_GL=egl uv run --locked python scripts/export.py Mjlab-Running-Flat-MicroDuck \
+  --checkpoint-file artifacts/pretrained/microduck-running/model_10998.pt \
+  --onnx-file outputs/running.onnx --num-envs 1 --seed 123 \
+  --running-speed 2.0 --episode-length-s 11 \
+  --video True --video-length 500 --video-width 1280 --video-height 720
 ```
 
-## Scope and safety
+The video is saved under `videos/play/` beside the checkpoint. Headless rendering requires working EGL support. The published video can also be watched directly from the release link above.
 
-These are simulation experiments, not hardware safety certifications. The
-swing model simulates two elastic tension-only cords and randomized actuator
-and sensor dynamics, but real cord knots, frame flex, textile contact, servo
-temperature, and assembly tolerances remain. Extreme-height stilts require an
-engineered load path and fall protection. Use a safety tether, current limits,
-an emergency stop, a clear exclusion zone, and conservative incremental tests.
+## Train and resume
 
-## License
+Start with a small smoke run and inspect its output before launching longer training:
 
-Software is licensed under Apache-2.0; see [`LICENSE`](LICENSE). As in the
-upstream project, 3D hardware design files are licensed under Creative Commons
-Attribution-NonCommercial-ShareAlike 4.0 International; see
-[`LICENSE-HARDWARE`](LICENSE-HARDWARE). Third-party MicroDuck assets retain
-their original attribution and terms. See [`NOTICE`](NOTICE) and the
-hardware-specific READMEs.
+```bash
+uv run --locked train Mjlab-Running-Flat-MicroDuck \
+  --env.scene.num-envs 64 --agent.max-iterations 5 \
+  --agent.run-name smoke --agent.logger tensorboard --agent.upload-model False
+```
+
+Then start a fresh running policy, for example:
+
+```bash
+MICRODUCK_RUNNING_TARGET_MAX_SPEED=2.0 MICRODUCK_RUNNING_SPEED_CAP=2.2 \
+uv run --locked train Mjlab-Running-Flat-MicroDuck \
+  --env.scene.num-envs 512 --agent.max-iterations 10000 \
+  --agent.seed 42 --agent.run-name running --agent.logger tensorboard \
+  --agent.upload-model False
+```
+
+This fresh-run example is not an exact reproduction of the published continuation. The curriculum gradually increases command speed; setting a target does not mean the robot immediately trains at or achieves that speed. Training can take several hours.
+
+Logs and checkpoints live in `logs/rsl_rl/<experiment_name>/<run>/`. To continue an existing running run, replace the example directory and checkpoint below:
+
+```bash
+RUN=your_existing_run_directory
+MODEL=model_999.pt
+MICRODUCK_RUNNING_TARGET_MAX_SPEED=2.0 MICRODUCK_RUNNING_SPEED_CAP=2.2 \
+uv run --locked train Mjlab-Running-Flat-MicroDuck \
+  --agent.resume True --agent.load-run "$RUN" --agent.load-checkpoint "$MODEL" \
+  --env.scene.num-envs 512 --agent.max-iterations 10000 \
+  --agent.logger tensorboard --agent.upload-model False
+```
+
+On resume, `max-iterations` specifies additional updates. Match the task and training settings to the saved run. Further experiment launchers are documented in [scripts/experiments](scripts/experiments/README.md).
+
+## Policy interface
+
+The policy runs at **50 Hz**, taking **61 actor observations** and producing **14 actions**. The observation layout includes 48 proprioceptive values plus a 13-value command block. Preserve the matching runtime's observation order, joint order, action scaling, and actuator model.
+
+Always export using [scripts/export.py](scripts/export.py): it embeds observation normalization and action clipping where configured. Do not apply normalization twice or treat the action vector as direct motor commands. Runtime integration is separate from training; see the [upstream robot runtime](https://github.com/pollen-robotics/microduck) and the [retained swing adapter](integrations/pollen-microduck/README.md) for their respective contracts.
+
+## Earlier running experiment
+
+This running demonstration was inherited from the source project. Its results are separate from this repository's newly trained policy above; the linked upstream model retains its original attribution.
+
+| Experiment | Preview | Documentation |
+| --- | --- | --- |
+| Earlier running policy | [![Upstream running demonstration](experiments/running/media/preview.gif)](experiments/running/media/preview.mp4) | [Results and model](experiments/running/README.md) |
+
+## Development
+
+```bash
+uv run --locked --with pytest pytest -q -rs
+uv build
+uv run --locked python scripts/verify_install.py
+uv run --locked python scripts/check_relative_links.py
+```
+
+The existing [GitHub Actions workflow](.github/workflows/ci.yml) runs CPU tests, packaging checks, documentation-link checks, and selected export and hardware-generation checks. Remote CI has not yet run for this repository. Earlier local validation recorded **220 passed, 2 skipped**; see the [dated validation record](docs/VALIDATION.md).
+
+| Path | Contents |
+| --- | --- |
+| `src/mjlab_microduck/` | Tasks, robot models, actuator model, and shared policy terms |
+| `scripts/` | Training helpers, evaluation, export, and verification |
+| `experiments/` | Retained experiment documentation and curated artifacts |
+| `hardware/` | Add-on generators, printable meshes, and galleries |
+| `integrations/` | Policy-specific runtime adapters |
+| `tests/` | Configuration and behavior regression tests |
+| `docs/` | Provenance, validation, and supporting notes |
+
+Generated training logs, new checkpoints, exports, virtual environments, and release staging files are ignored by Git. Download the published model from Hugging Face; curated historical experiment artifacts remain tracked for reproducibility.
+
+## Attribution and license
+
+This independent refactor is based on [Vottivott/microduck-playground](https://github.com/Vottivott/microduck-playground), itself derived from [pollen-robotics/microduck_rl](https://github.com/pollen-robotics/microduck_rl). It is not an official Pollen Robotics release. Fresh Git history does not imply original authorship of the inherited work. See [provenance](docs/PROVENANCE.md) and [NOTICE](NOTICE).
+
+Software: [Apache-2.0](LICENSE). 3D hardware designs: [CC BY-NC-SA 4.0](LICENSE-HARDWARE). Simulation results do not establish hardware readiness.
