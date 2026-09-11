@@ -54,3 +54,14 @@ logdir/.claude/worktrees/
 .env
 .env.*
 !.env.example
+
+# Local AI assistant instructions, sessions, and planning notes
+.codex/
+.agents/
+.claude/
+AGENTS.md
+AGENTS.override.md
+CLAUDE.md
+docs/superpowers/
+/SPEED2_PLAN.md
+/STRAIGHT_SPEED_PLAN.md
