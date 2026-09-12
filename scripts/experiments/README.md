@@ -17,8 +17,6 @@ Run a 64-environment, 5-update smoke test before a longer trial. The aggregate
 search recipes retain their original longer budgets; they do not add a smoke
 test automatically.
 
-## Paths and prerequisites
-
 ## Bounded straight-running comparison
 
 `run_straight_comparison.py` implements the three-trial comparison used for the
