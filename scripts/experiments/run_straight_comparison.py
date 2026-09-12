@@ -154,10 +154,19 @@ def nan_metrics(run_dir, required=False):
 
 def verify_curriculum_metrics(metrics, name, stages, field, start_counter, updates):
     observed = [values for tag, values in metrics.items() if name in tag and values]
-    for index, counter in ((0, start_counter + 24), (-1, start_counter + updates * 24)):
-        expected = float([s for s in stages if int(s['step']) <= counter][-1][field])
-        if not observed or any(not math.isclose(values[index], expected, abs_tol=1e-6) for values in observed):
-            raise ValueError(f'Restored curriculum {name} mismatch at counter {counter}: {observed}, expected {expected}')
+    start_value = float([s for s in stages if int(s['step']) <= start_counter + 24][-1][field])
+    final_value = float([s for s in stages if int(s['step']) <= start_counter + updates * 24][-1][field])
+    initial_value = float(stages[0][field])
+    # The first rollout averages reset extras from before checkpoint load until
+    # the first post-load reset. It can mix the initial and restored curriculum.
+    low, high = min(initial_value, start_value), max(initial_value, start_value)
+    resumed_low, resumed_high = min(start_value, final_value), max(start_value, final_value)
+    if (not observed or any(not math.isfinite(value) for values in observed for value in values)
+            or any(not low - 1e-6 <= values[0] <= high + 1e-6 for values in observed)
+            or any(not resumed_low - 1e-6 <= value <= resumed_high + 1e-6
+                   for values in observed for value in values[1:])
+            or any(not math.isclose(values[-1], final_value, abs_tol=1e-6) for values in observed)):
+        raise ValueError(f'Restored curriculum {name} mismatch: {observed}, expected final {final_value}')
 
 
 def verify_training(run_dir, stage, source):
@@ -393,8 +402,8 @@ class Comparison:
         target_met = all(chosen[d]['straight_progress_speed_mps'] >= 2.0
                          and chosen[d]['survival_fraction'] >= threshold
                          for d, threshold in (('10', .95), ('30', .90)))
-        useful = (chosen['30']['straight_progress_speed_mps'] >= baseline['30']['straight_progress_speed_mps'] + .02
-                  and chosen['30']['survival_fraction'] >= max(.90, baseline['30']['survival_fraction'] - .01))
+        useful = is_useful_improvement(chosen['30'], baseline['30'],
+                                       sha256(selected['checkpoint']), sha256(self.parent))
         destination = self.output / 'selected/checkpoint.pt'
         destination.parent.mkdir(parents=True, exist_ok=True)
         if destination.exists() and sha256(destination) != sha256(selected['checkpoint']):
@@ -419,6 +428,12 @@ class Comparison:
         write(self.output / 'result.json', result)
         report(self.output / 'REPORT.md', result)
         return result
+
+
+def is_useful_improvement(selected, parent, selected_sha256, parent_sha256):
+    return (selected_sha256 != parent_sha256
+            and selected['straight_progress_speed_mps'] >= parent['straight_progress_speed_mps'] + .02
+            and selected['survival_fraction'] >= max(.90, parent['survival_fraction'] - .01))
 
 
 def aggregate(rows):

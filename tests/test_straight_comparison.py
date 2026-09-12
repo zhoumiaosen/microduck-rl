@@ -82,6 +82,16 @@ def test_validation_never_keeps_worse_candidate():
     assert select_candidate(parent, [worse, better]) is better
 
 
+def test_unchanged_parent_cannot_be_useful_improvement_due_to_evaluation_drift():
+    from scripts.experiments.run_straight_comparison import is_useful_improvement
+    parent = {'straight_progress_speed_mps': 1.80, 'survival_fraction': .96}
+    selected = {'straight_progress_speed_mps': 1.83, 'survival_fraction': .96}
+    assert not is_useful_improvement(selected, parent, 'same-checkpoint', 'same-checkpoint')
+    assert is_useful_improvement(selected, parent, 'new-checkpoint', 'same-checkpoint')
+    assert not is_useful_improvement({**selected, 'survival_fraction': .94}, parent,
+                                     'new-checkpoint', 'same-checkpoint')
+
+
 def test_failed_stage_cannot_spend_budget_again(tmp_path):
     from scripts.experiments.run_straight_comparison import Comparison
     comparison = Comparison.__new__(Comparison)
@@ -129,6 +139,17 @@ def test_curriculum_check_allows_stage_transition_within_trial():
     with pytest.raises(ValueError, match='curriculum'):
         verify_curriculum_metrics({'Curriculum/running_speed_range': [2.4, 2.4]},
                                   'running_speed_range', stages, 'max_speed', 264000, 400)
+
+
+def test_curriculum_startup_average_does_not_reject_completed_smoke():
+    from scripts.experiments.run_straight_comparison import verify_curriculum_metrics
+    stages = [{'step': '0', 'max_speed': '.45'}, {'step': '270000', 'max_speed': '2.5'}]
+    verify_curriculum_metrics({'Curriculum/running_speed_range': [2.1583333, 2.5, 2.5, 2.5, 2.5]},
+                              'running_speed_range', stages, 'max_speed', 326688, 5)
+    for values in ([2.1583333, 2.4], [float('nan'), 2.5], [9.0, 2.5], [2.1583333, 9.0, 2.5]):
+        with pytest.raises(ValueError, match='curriculum'):
+            verify_curriculum_metrics({'Curriculum/running_speed_range': values},
+                                      'running_speed_range', stages, 'max_speed', 326688, 5)
 
 
 def test_controller_cli_clears_inherited_running_flags(monkeypatch, tmp_path):
