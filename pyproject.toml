@@ -107,3 +107,7 @@ name = "pytorch-cu129"
 url = "https://download.pytorch.org/whl/cu129"
 # explicit: only packages that name this index resolve from it.
 explicit = true
+
+[tool.pytest.ini_options]
+# Tests exercise repository scripts as well as the installed src package.
+pythonpath = ["."]
