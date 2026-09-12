@@ -19,6 +19,33 @@ test automatically.
 
 ## Paths and prerequisites
 
+## Bounded straight-running comparison
+
+`run_straight_comparison.py` implements the three-trial comparison used for the
+[straight-running release](https://huggingface.co/zhoumiaosen/microduck-straight-running).
+It runs independent five-update smokes and 400-update continuations (1,215 updates
+maximum), screens saved checkpoints, freezes selection on validation seeds,
+then evaluates held-out seeds and exports the selected policy. An incomplete
+stage stops for investigation; matching completed receipts prevent replaying
+already completed training.
+
+Preview the schedule without loading a checkpoint or starting GPU work:
+
+```bash
+python scripts/experiments/run_straight_comparison.py \
+  --parent /absolute/path/compatible-parent.pt \
+  --output-dir artifacts/new-straight-comparison --dry-run
+```
+
+Remove `--dry-run` to execute in the configured Linux/WSL runtime. The parent
+must have compatible 61/76-observation actor/critic state, optimizer state, and
+a restored curriculum counter of at least 132,000. Use a new output directory
+for a new comparison and keep the checkout commit fixed during a run. The
+historical parent is identified by hash in the model card and is not bundled;
+starting from the released selected checkpoint produces a new experiment.
+
+## Historical recipe paths and prerequisites
+
 - `UV_PROJECT_ENVIRONMENT` defaults to this checkout's `.venv`. You may set it
   to a dedicated environment elsewhere (for example on WSL's Linux filesystem).
   Commands use `uv run --locked` with this checkout's project and lock file.

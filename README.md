@@ -2,20 +2,22 @@
 
 Train, evaluate, and export reinforcement-learning policies for [Pollen Robotics' MicroDuck](https://github.com/pollen-robotics/microduck), a small biped with 14 actuators. Built with **mjlab, MuJoCo Warp, and PPO**, with 39 registered tasks covering locomotion and additional behaviors.
 
-[**Download the trained model**](https://huggingface.co/zhoumiaosen/microduck-running) · [**Watch the running video**](https://huggingface.co/zhoumiaosen/microduck-running/resolve/main/run.mp4) · [Setup](#setup) · [Train](#train-and-resume) · [Validation](docs/VALIDATION.md)
+[**Download the trained model**](https://huggingface.co/zhoumiaosen/microduck-straight-running) · [**Watch the running video**](https://huggingface.co/zhoumiaosen/microduck-straight-running/resolve/main/run.mp4) · [Setup](#setup) · [Train](#train-and-resume) · [Validation](docs/VALIDATION.md)
 
 ## Published running policy
 
-The current release reaches **1.50 m/s average body-forward speed in simulation**. It was trained toward a 2.0 m/s command; that sustained-speed target was **not met**.
+The current release reaches **1.844 m/s straight progress over 10 seconds** and **1.806 m/s over 30 seconds** in simulation, using a heading-hold controller. The sustained **2.0 m/s target was not met**.
 
-| Evaluation | Mean body-forward speed | Mean straight progress | Survival |
+| Evaluation | Parent straight progress | Selected straight progress | Selected survival |
 | --- | ---: | ---: | ---: |
-| 10 seconds, averaged over three seeds | 1.499 m/s | 1.234 m/s | 96.74% |
-| 30 seconds, seed 456 | 1.499 m/s | See raw evaluation | 91.21% |
+| 10 seconds, three held-out seeds | 1.83940 m/s | 1.84439 m/s | 98.05% |
+| 30 seconds, three held-out seeds | 1.79879 m/s | 1.80560 m/s | 93.16% |
 
-Each evaluation uses 512 environments at a 2.0 m/s command. Heading drift reduces straight-line progress, so body-forward speed should not be confused with travel along the original heading. These are simulation results; this release has not been validated on a physical robot.
+The observed 30-second gain is **+0.00681 m/s (+0.38%)**, below the predefined 0.02 m/s useful-improvement threshold. Repeat evaluations varied, so this small gain is not established as repeatable. Each evaluation uses 512 environments, command 2.0 m/s, a one-second warmup, and held-out seeds 2027/4093/8191. Selection was frozen before these tests. Straight progress measures travel along the initial heading and counts failed trajectories as zero thereafter; it is distinct from body-forward speed.
 
-The [Hugging Face release](https://huggingface.co/zhoumiaosen/microduck-running) contains the final PPO checkpoint, normalized ONNX policy, video, full model card, file hashes, and [raw evaluations](https://huggingface.co/zhoumiaosen/microduck-running/tree/main/evaluation). Training used an RTX 3070, 512 environments, and 10,000 additional updates resumed from iteration 999. The released checkpoint is `model_10998.pt`.
+The [Hugging Face release](https://huggingface.co/zhoumiaosen/microduck-straight-running) contains selected checkpoint `model_13600.pt`, normalized ONNX, video, model card, file hashes, recipe, and [raw evaluations](https://huggingface.co/zhoumiaosen/microduck-straight-running/tree/main/evaluation). Three independent continuations plus smoke tests consumed 1,215 updates on an RTX 3070. Trial A's early checkpoint won validation; later checkpoints generally lost stability.
+
+The comparison parent is the stronger intermediate straight-running checkpoint, not the [older public model](https://huggingface.co/zhoumiaosen/microduck-running). That older release used a different control configuration, so this is not a controlled improvement claim over it. Physical robot deployment remains untested.
 
 ## Setup
 
@@ -36,9 +38,10 @@ Keep `uv.lock` and `pyproject.toml` together. The lockfile records the dependenc
 Download the public release without needing a Hugging Face login:
 
 ```bash
-uv run --locked hf download zhoumiaosen/microduck-running \
-  --revision 49f70558bd8f42f0f05fcdea64f4bec596c9a3a6 \
-  --local-dir artifacts/pretrained/microduck-running
+uv run --locked hf download zhoumiaosen/microduck-straight-running \
+  --revision 9241cc4e0a5e99e84f2025558c1cda74ecde60fc \
+  --local-dir artifacts/pretrained/microduck-straight-running
+source artifacts/pretrained/microduck-straight-running/environment.sh
 ```
 
 Measure it at a 2.0 m/s command:
@@ -46,19 +49,19 @@ Measure it at a 2.0 m/s command:
 ```bash
 mkdir -p outputs
 uv run --locked python scripts/evaluate_running_checkpoint.py \
-  --checkpoint-file artifacts/pretrained/microduck-running/model_10998.pt \
-  --speed 2.0 --num-envs 512 --duration-s 10 --warmup-s 1 --seed 123 \
+  --checkpoint-file artifacts/pretrained/microduck-straight-running/model_13600.pt \
+  --speed 2.0 --num-envs 512 --duration-s 10 --warmup-s 1 --seed 2027 \
   --output-file outputs/running-evaluation.json
 ```
 
-Use seeds 456 and 789 for the other short evaluations; use seed 456 and `--duration-s 30` for the long evaluation. Reducing `--num-envs` can help on smaller GPUs, but changes the evaluation population.
+Use seeds 4093 and 8191 for the other evaluations, and repeat all three with `--duration-s 30` for the long evaluations. Start from a clean shell without other `MICRODUCK_RUNNING_*` overrides. Reducing `--num-envs` can help on smaller GPUs, but changes the evaluation population.
 
 Record a ten-second replay and export the policy:
 
 ```bash
 MUJOCO_GL=egl uv run --locked python scripts/export.py Mjlab-Running-Flat-MicroDuck \
-  --checkpoint-file artifacts/pretrained/microduck-running/model_10998.pt \
-  --onnx-file outputs/running.onnx --num-envs 1 --seed 123 \
+  --checkpoint-file artifacts/pretrained/microduck-straight-running/model_13600.pt \
+  --onnx-file outputs/running.onnx --num-envs 1 --seed 2027 \
   --running-speed 2.0 --episode-length-s 11 \
   --video True --video-length 500 --video-width 1280 --video-height 720
 ```
@@ -105,6 +108,8 @@ On resume, `max-iterations` specifies additional updates. Match the task and tra
 
 The policy runs at **50 Hz**, taking **61 actor observations** and producing **14 actions**. The observation layout includes 48 proprioceptive values plus a 13-value command block. Preserve the matching runtime's observation order, joint order, action scaling, and actuator model.
 
+The current release requires `RunningStraightCommand`, enabled by the downloaded environment file. It holds the reset heading through a yaw-rate command. **The ONNX file does not include this heading controller**; keep the matching command construction and reset behavior when integrating it.
+
 Always export using [scripts/export.py](scripts/export.py): it embeds observation normalization and action clipping where configured. Do not apply normalization twice or treat the action vector as direct motor commands. Runtime integration is separate from training; see the [upstream robot runtime](https://github.com/pollen-robotics/microduck) and the [retained swing adapter](integrations/pollen-microduck/README.md) for their respective contracts.
 
 ## Earlier running experiment
@@ -124,7 +129,7 @@ uv run --locked python scripts/verify_install.py
 uv run --locked python scripts/check_relative_links.py
 ```
 
-The existing [GitHub Actions workflow](.github/workflows/ci.yml) runs CPU tests, packaging checks, documentation-link checks, and selected export and hardware-generation checks. Remote CI has not yet run for this repository. Earlier local validation recorded **220 passed, 2 skipped**; see the [dated validation record](docs/VALIDATION.md).
+The existing [GitHub Actions workflow](.github/workflows/ci.yml) runs CPU tests, packaging checks, documentation-link checks, and selected export and hardware-generation checks. Local straight-running release validation recorded **239 passed, 2 skipped**, successful package builds, and ONNX action parity within `2e-5`; see the [dated validation record](docs/VALIDATION.md). Local results do not assert the status of remote CI.
 
 | Path | Contents |
 | --- | --- |

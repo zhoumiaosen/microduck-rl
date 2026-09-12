@@ -44,6 +44,39 @@ During final verification the original checkout gained a new untracked
 `STRAIGHT_SPEED_RESULTS.md`. It was not part of the starting snapshot and was
 left in the original folder. No previously captured source file changed.
 
+## Straight-running release (2026-09-11)
+
+The [new public model](https://huggingface.co/zhoumiaosen/microduck-straight-running)
+is checkpoint `model_13600.pt`, selected from three independent continuations of
+the stronger intermediate straight-running parent. Each trial used a separate
+five-update smoke and 400-update continuation: 1,215 updates total. Fifteen saved
+checkpoints were screened; the best qualifying checkpoint per trial and the
+parent received three-seed validation at 10 and 30 seconds. Selection was frozen
+before held-out seeds 2027/4093/8191 were tested at both durations.
+
+| Held-out average | Parent | Selected A |
+| --- | ---: | ---: |
+| 10-second straight progress | 1.83940 m/s | 1.84439 m/s |
+| 10-second survival | 97.8516% | 98.0469% |
+| 30-second straight progress | 1.79879 m/s | 1.80560 m/s |
+| 30-second survival | 93.0339% | 93.1641% |
+
+Both policies used 512 environments, command 2.0 m/s, warmup 1 second, and
+`RunningStraightCommand`. The 0.00681 m/s long-run gain is below the 0.02 m/s
+useful-improvement threshold; the 2.0 m/s target was not met. Repeated parent
+evaluations differed by about 0.019 m/s between initial baseline and validation,
+so the small gain is descriptive and not established as repeatable. This matched
+parent is not the older public `model_10998.pt` release.
+
+The final CPU suite passed 239 tests with the same two environment-specific
+skips described above. Wheel and source distribution builds passed. All 62
+completed stage receipts matched their output hashes. Ten-step ONNX parity on
+identical real rollout observations had maximum absolute action error
+`4.2915344e-6`, below `2e-5`. The video was verified as 10 seconds at 50 fps.
+The ONNX actor includes normalization but excludes the required heading controller.
+The release's model, ONNX, video, and evaluation evidence were downloaded from
+Hugging Face and hash-verified after publication.
+
 ## Reproduce the core checks
 
 From the repository root, after `uv sync --locked`:
